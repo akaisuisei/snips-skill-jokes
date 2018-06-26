@@ -3,8 +3,10 @@
 
 from hermes_python.hermes import Hermes
 import os
-import time
 import random
+import requests
+import time
+
 
 CONFIGURATION_ENCODING_FORMAT = "utf-8"
 CONFIG_INI = "config.ini"
@@ -15,14 +17,16 @@ MQTT_ADDR = "{}:{}".format(MQTT_IP_ADDR, str(MQTT_PORT))
 
 DIR = os.path.dirname(os.path.realpath(__file__)) + '/text/'
 
+lang = "EN"
+client = None
+
 class Skill:
 
     def __init__(self):
-        self.lang = 'en'
-        self.jokes = tuple(open(DIR + "jokes_" + self.lang + ".txt", 'r'))
+        self.jokes = tuple(open(DIR + "jokes_" + lang + ".txt", 'r'))
         print(self.jokes)
     def get_jokes(self):
-        return random.choice(self.jokes)
+        line = random.choice(self.jokes)
 
 def callback(hermes, intent_message):
     tmp = hermes.skill.get_jokes()
@@ -30,10 +34,16 @@ def callback(hermes, intent_message):
     print(tmp)
     hermes.publish_end_session(current_session_id, tmp)
 
+def getLang():
+    try:
+        return requests.get("http://localhost:3000/config/lang").text.upper();
+    except:
+        return "EN"
 if __name__ == "__main__":
+    lang = getLang()
+    print(lang)
     skill = Skill()
-    
-    with Hermes(MQTT_ADDR) as h: 
+    with Hermes(MQTT_ADDR) as h:
         h.skill = skill
-        h.subscribe_intent("akaisuisei:askJokes", callback) \
+        h.subscribe_intent("snips-labs:askJokes_" + lang, callback) \
          .loop_forever()
