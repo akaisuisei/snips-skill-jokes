@@ -1,12 +1,14 @@
 #!/usr/bin/env python2
 # -*-: coding utf-8 -*-
 
+import glob
 from hermes_python.hermes import Hermes
 import os
+import paho.mqtt.client as mqtt
 import random
 import requests
+import threading
 import time
-import glob
 
 CONFIGURATION_ENCODING_FORMAT = "utf-8"
 CONFIG_INI = "config.ini"
@@ -17,8 +19,38 @@ MQTT_ADDR = "{}:{}".format(MQTT_IP_ADDR, str(MQTT_PORT))
 
 DIR = os.path.dirname(os.path.realpath(__file__)) + '/sound/'
 
+alive = 0;
 lang = "EN"
 client = None
+pingTopic = 'concierge/apps/live/ping'
+pongTopic = 'concierge/apps/live/pong'
+
+def on_connect(client, userdata, flags, rc):
+    if (alive > 0):
+        client.subscribe(pingTopic)
+
+def on_message(client, userdata, msg):
+    client.publish(pongTopic, '{"result":"snips-skill-joke"}')
+
+def setTimer():
+    global alive
+    alive += 1
+    client.subscribe(pingTopic)
+    t = threading.Timer(300, runTimer)
+    t.start()
+
+def runTimer():
+    global alive
+    alive -= 1
+    if (alive <= 0):
+        client.unsubscribe(pingTopic)
+
+def getLang():
+    try:
+        res = requests.get("http://localhost:3000/assistant/lang").json;
+        return res.response
+    except :
+        return "EN"
 
 class Skill:
 
@@ -29,6 +61,7 @@ class Skill:
         return random.choice(self.jokes)
 
 def callback(hermes, intent_message):
+    setTimer()
     tmp = hermes.skill.get_jokes()
     current_session_id = intent_message.session_id
     playWav(intent_message.site_id, tmp)
@@ -46,13 +79,13 @@ def playWav(siteId, wavFile):
     import paho.mqtt.publish as publish
     publish.single(topic, payload);
 
-def getLang():
-    try:
-        return requests.get("http://localhost:3000/config/lang").text.upper();
-    except:
-        return "EN"
 
 if __name__ == "__main__":
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(MQTT_IP_ADDR)
+    client.loop_start()
     lang = getLang()
     skill = Skill()
     with Hermes(MQTT_ADDR) as h:
