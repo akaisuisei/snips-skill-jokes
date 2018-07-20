@@ -1,3 +1,2 @@
 hermes_python>=0.1
-requests
-paho-mqtt
+git+git://github.com/akaisuisei/concierge-python
