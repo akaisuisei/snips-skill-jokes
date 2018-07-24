@@ -35,7 +35,7 @@ class Skill:
         tmp = random.choice(self.jokes)
         self.concierge.play_wave(siteId, tmp, tmp)
 
-    def on_ping(self, client, userdata, msg):
+    def on_ping(self):
         if (self._alive > 0):
             self.concierge.publishPong(Skill._id)
 
