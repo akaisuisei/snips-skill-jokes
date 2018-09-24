@@ -50,7 +50,7 @@ class Skill:
 def callback(hermes, intent_message):
     hermes.skill.get_jokes(intent_message.site_id)
     current_session_id = intent_message.session_id
-    hermes.publish_end_session(current_session_id, None)
+    hermes.publish_end_session(current_session_id, "")
 
 if __name__ == "__main__":
     lang = Concierge.getLang()
